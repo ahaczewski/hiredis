@@ -261,9 +261,13 @@ int redisContextConnectTcp(redisContext *c, const char *addr, int port, const st
      * route could be: Use IPv6 if both addresses are available and there is IPv6
      * connectivity. */
     if ((rv = getaddrinfo(addr,_port,&hints,&servinfo)) != 0) {
-         hints.ai_family = AF_INET6;
-         if ((rv = getaddrinfo(addr,_port,&hints,&servinfo)) != 0) {
-            __redisSetError(c,REDIS_ERR_OTHER,gai_strerror(rv));
+        const char *inet_error = gai_strerror(rv);
+        hints.ai_family = AF_INET6;
+        if ((rv = getaddrinfo(addr,_port,&hints,&servinfo)) != 0) {
+            if (rv == EAI_SYSTEM)
+                __redisSetError(c,REDIS_ERR_OTHER,inet_error);
+            else
+                __redisSetError(c,REDIS_ERR_OTHER,gai_strerror(rv));
             return REDIS_ERR;
         }
     }
